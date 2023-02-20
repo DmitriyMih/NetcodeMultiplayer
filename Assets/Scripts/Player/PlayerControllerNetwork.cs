@@ -10,18 +10,15 @@ public class PlayerControllerNetwork : NetworkBehaviour
     private Vector3 moveDirection;
 
     [SerializeField] private NetworkVariable<int> randomSpeedNumber = new NetworkVariable<int>(1, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
-    [SerializeField] private NetworkVariable<MyCustomData> randomStruct = new NetworkVariable<MyCustomData>(new MyCustomData { _int = 1, _bool = false }, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+    [SerializeField] private NetworkVariable<MyCustomData> messageSystem = new NetworkVariable<MyCustomData>(new MyCustomData { }, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+    [SerializeField] private string message;
 
     public struct MyCustomData : INetworkSerializable
     {
-        public int _int;
-        public bool _bool;
         public FixedString128Bytes message;
 
         public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
         {
-            serializer.SerializeValue(ref _int);
-            serializer.SerializeValue(ref _bool);
             serializer.SerializeValue(ref message);
         }
     }
@@ -34,10 +31,21 @@ public class PlayerControllerNetwork : NetworkBehaviour
             Debug.Log($"Client {OwnerClientId} | Value {randomSpeedNumber.Value}" % Colorize.Green % FontFormat.Bold);
         };
 
-        randomStruct.OnValueChanged += (MyCustomData previousValue, MyCustomData newValue) =>
+        messageSystem.OnValueChanged += (MyCustomData previousValue, MyCustomData newValue) =>
         {
-            Debug.Log($"Client {OwnerClientId} | Value {newValue._int} | Bool {newValue._bool} | Message {newValue.message}" % Colorize.Yellow % FontFormat.Bold);
+            if (CustomChatManager.Instance != null)
+                CustomChatManager.Instance.OnSetMessage?.Invoke(newValue.message.ConvertToString());
+            Debug.Log($"Client {OwnerClientId} | Message {newValue.message}" % Colorize.Yellow % FontFormat.Bold);
         };
+    }
+
+    private void Start()
+    {
+        if (!IsOwner)
+            return;
+
+        if (CustomChatManager.Instance != null)
+            CustomChatManager.Instance.OnSendMeaage += SendGlobalMessage;
     }
 
     private void Update()
@@ -59,12 +67,12 @@ public class PlayerControllerNetwork : NetworkBehaviour
             randomSpeedNumber.Value = Random.Range(1, 4);
 
         if (Input.GetKeyDown(KeyCode.E))
-            randomStruct.Value = new MyCustomData { _int = Random.Range(1, 5), _bool = ConvertToBool(Random.Range(0, 2)), message = "Player " + OwnerClientId };
+            messageSystem.Value = new MyCustomData { message = $"Player {OwnerClientId} Send: " + message };
     }
 
-    private bool ConvertToBool(int value)
+    private void SendGlobalMessage(string newMessage)
     {
-        return value != 0;
+        messageSystem.Value = new MyCustomData { message = $"Player {OwnerClientId} Send: " + newMessage };
     }
 
     private void HandleMovement()
