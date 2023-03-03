@@ -1,10 +1,8 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using Unity.Netcode;
 
-public class NetworkManagerUI : MonoBehaviour
+public class NetworkManagerUI : NetworkBehaviour
 {
     [SerializeField] private Button serverButton;
     [SerializeField] private Button hostButton;
@@ -12,16 +10,16 @@ public class NetworkManagerUI : MonoBehaviour
 
     private void Awake()
     {
-        serverButton.onClick.AddListener(() => 
+        serverButton.onClick.AddListener(() =>
         {
             NetworkManager.Singleton.StartServer();
         });
-        
+
         hostButton.onClick.AddListener(() =>
         {
             NetworkManager.Singleton.StartHost();
         });
-        
+
         clientButton.onClick.AddListener(() =>
         {
             NetworkManager.Singleton.StartClient();
